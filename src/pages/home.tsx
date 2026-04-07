@@ -1,440 +1,255 @@
 import {
-  DnsOutlined,
-  HelpOutlineRounded,
-  HistoryEduOutlined,
-  RouterOutlined,
-  SettingsOutlined,
-  SpeedOutlined,
+  CloudUploadRounded,
+  PowerSettingsNewRounded,
+  RocketLaunchRounded,
 } from '@mui/icons-material'
 import {
+  Alert,
   Box,
   Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  Card,
+  CardContent,
   FormControlLabel,
-  FormGroup,
-  Grid,
-  IconButton,
-  Skeleton,
-  Tooltip,
+  Stack,
+  Switch as MuiSwitch,
+  Typography,
 } from '@mui/material'
 import { useLockFn } from 'ahooks'
-import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import type { ChangeEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import { BasePage } from '@/components/base'
-import { ClashModeCard } from '@/components/home/clash-mode-card'
-import { CurrentProxyCard } from '@/components/home/current-proxy-card'
-import { EnhancedCard } from '@/components/home/enhanced-card'
-import { EnhancedTrafficStats } from '@/components/home/enhanced-traffic-stats'
-import { HomeProfileCard } from '@/components/home/home-profile-card'
-import { ProxyTunCard } from '@/components/home/proxy-tun-card'
 import { useProfiles } from '@/hooks/use-profiles'
+import { useServiceInstaller } from '@/hooks/use-service-installer'
+import { useSystemState } from '@/hooks/use-system-state'
 import { useVerge } from '@/hooks/use-verge'
-import { entry_lightweight_mode, openWebUrl } from '@/services/cmds'
+import {
+  isAdmin,
+  isServiceAvailable,
+  importWireguardConf,
+  setKaifVpnEnabled,
+} from '@/services/cmds'
+import { showNotice } from '@/services/notice-service'
 
-const LazyTestCard = lazy(() =>
-  import('@/components/home/test-card').then((module) => ({
-    default: module.TestCard,
-  })),
-)
-const LazyIpInfoCard = lazy(() =>
-  import('@/components/home/ip-info-card').then((module) => ({
-    default: module.IpInfoCard,
-  })),
-)
-const LazyClashInfoCard = lazy(() =>
-  import('@/components/home/clash-info-card').then((module) => ({
-    default: module.ClashInfoCard,
-  })),
-)
-const LazySystemInfoCard = lazy(() =>
-  import('@/components/home/system-info-card').then((module) => ({
-    default: module.SystemInfoCard,
-  })),
-)
+const MANAGED_PROFILE_NAME = 'kaif vpnchik'
 
-// 定义首页卡片设置接口
-interface HomeCardsSettings {
-  profile: boolean
-  proxy: boolean
-  network: boolean
-  mode: boolean
-  traffic: boolean
-  info: boolean
-  clashinfo: boolean
-  systeminfo: boolean
-  test: boolean
-  ip: boolean
-  [key: string]: boolean
-}
-
-// 首页设置对话框组件接口
-interface HomeSettingsDialogProps {
-  open: boolean
-  onClose: () => void
-  homeCards: HomeCardsSettings
-  onSave: (cards: HomeCardsSettings) => void
-}
-
-const serializeCardFlags = (cards: HomeCardsSettings) =>
-  Object.keys(cards)
-    .sort()
-    .map((key) => `${key}:${cards[key] ? 1 : 0}`)
-    .join('|')
-
-// 首页设置对话框组件
-const HomeSettingsDialog = ({
-  open,
-  onClose,
-  homeCards,
-  onSave,
-}: HomeSettingsDialogProps) => {
-  const { t } = useTranslation()
-  const [cards, setCards] = useState<HomeCardsSettings>(homeCards)
-  const { patchVerge } = useVerge()
-
-  const handleToggle = (key: string) => {
-    setCards((prev: HomeCardsSettings) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
-
-  const handleSave = async () => {
-    await patchVerge({ home_cards: cards })
-    onSave(cards)
-    onClose()
-  }
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{t('home.page.settings.title')}</DialogTitle>
-      <DialogContent>
-        <FormGroup>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.profile || false}
-                onChange={() => handleToggle('profile')}
-              />
-            }
-            label={t('home.page.settings.cards.profile')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.proxy || false}
-                onChange={() => handleToggle('proxy')}
-              />
-            }
-            label={t('home.page.settings.cards.currentProxy')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.network || false}
-                onChange={() => handleToggle('network')}
-              />
-            }
-            label={t('home.page.settings.cards.network')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.mode || false}
-                onChange={() => handleToggle('mode')}
-              />
-            }
-            label={t('home.page.settings.cards.proxyMode')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.traffic || false}
-                onChange={() => handleToggle('traffic')}
-              />
-            }
-            label={t('home.page.settings.cards.traffic')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.test || false}
-                onChange={() => handleToggle('test')}
-              />
-            }
-            label={t('home.page.settings.cards.tests')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.ip || false}
-                onChange={() => handleToggle('ip')}
-              />
-            }
-            label={t('home.page.settings.cards.ip')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.clashinfo || false}
-                onChange={() => handleToggle('clashinfo')}
-              />
-            }
-            label={t('home.page.settings.cards.clashInfo')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={cards.systeminfo || false}
-                onChange={() => handleToggle('systeminfo')}
-              />
-            }
-            label={t('home.page.settings.cards.systemInfo')}
-          />
-        </FormGroup>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('shared.actions.cancel')}</Button>
-        <Button onClick={handleSave} color="primary">
-          {t('shared.actions.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  )
-}
-
-const HomePage = () => {
-  const { t } = useTranslation()
-  const { verge } = useVerge()
-  const { current, mutateProfiles } = useProfiles()
-
-  // 设置弹窗的状态
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [localHomeCards, setLocalHomeCards] = useState<{
-    value: HomeCardsSettings
-    baseSignature: string
-  } | null>(null)
-
-  // 卡片显示状态
-  const defaultCards = useMemo<HomeCardsSettings>(
-    () => ({
-      info: false,
-      profile: true,
-      proxy: true,
-      network: true,
-      mode: true,
-      traffic: true,
-      clashinfo: true,
-      systeminfo: true,
-      test: true,
-      ip: true,
-    }),
-    [],
-  )
-
-  const vergeHomeCards = useMemo<HomeCardsSettings | null>(
-    () => (verge?.home_cards as HomeCardsSettings | undefined) ?? null,
-    [verge],
-  )
-
-  const remoteHomeCards = useMemo<HomeCardsSettings>(
-    () => vergeHomeCards ?? defaultCards,
-    [defaultCards, vergeHomeCards],
-  )
-
-  const remoteSignature = useMemo(
-    () => serializeCardFlags(remoteHomeCards),
-    [remoteHomeCards],
-  )
-
-  const pendingLocalCards = useMemo<HomeCardsSettings | null>(() => {
-    if (!localHomeCards) return null
-    return localHomeCards.baseSignature === remoteSignature
-      ? localHomeCards.value
-      : null
-  }, [localHomeCards, remoteSignature])
-
-  const effectiveHomeCards = pendingLocalCards ?? remoteHomeCards
-
-  // 文档链接函数
-  const toGithubDoc = useLockFn(() => {
-    return openWebUrl('https://clash-verge-rev.github.io/index.html')
+const readFileAsText = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (event) => resolve(String(event.target?.result ?? ''))
+    reader.onerror = reject
+    reader.readAsText(file)
   })
 
-  // 新增：打开设置弹窗
-  const openSettings = useCallback(() => {
-    setSettingsOpen(true)
-  }, [])
-
-  const renderCard = useCallback(
-    (cardKey: string, component: React.ReactNode, size: number = 6) => {
-      if (!effectiveHomeCards[cardKey]) return null
-
-      return (
-        <Grid size={size} key={cardKey}>
-          {component}
-        </Grid>
-      )
-    },
-    [effectiveHomeCards],
+const HomePage = () => {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const { current, mutateProfiles } = useProfiles()
+  const { verge, patchVerge } = useVerge()
+  const { isTunModeAvailable, mutateSystemState } = useSystemState()
+  const { installServiceAndRestartCore } = useServiceInstaller()
+  const [lastImport, setLastImport] = useState<IWireGuardImportResult | null>(
+    null,
   )
+  const [dragActive, setDragActive] = useState(false)
 
-  const criticalCards = useMemo(
-    () => [
-      renderCard(
-        'profile',
-        <HomeProfileCard current={current} onProfileUpdated={mutateProfiles} />,
-      ),
-      renderCard('proxy', <CurrentProxyCard />),
-      renderCard('network', <NetworkSettingsCard />),
-      renderCard('mode', <ClashModeEnhancedCard />),
-    ],
-    [current, mutateProfiles, renderCard],
-  )
+  const hasManagedProfile =
+    current?.name === MANAGED_PROFILE_NAME || !!lastImport
+  const tunEnabled = verge?.enable_tun_mode ?? false
+  const autoLaunchEnabled = verge?.enable_auto_launch ?? true
 
-  // 新增：保存设置时用requestIdleCallback/setTimeout
-  const handleSaveSettings = (newCards: HomeCardsSettings) => {
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(() =>
-        setLocalHomeCards({
-          value: newCards,
-          baseSignature: remoteSignature,
-        }),
-      )
-    } else {
-      setTimeout(
-        () =>
-          setLocalHomeCards({
-            value: newCards,
-            baseSignature: remoteSignature,
-          }),
-        0,
-      )
+  const endpointLabel = useMemo(() => {
+    if (lastImport) return `${lastImport.server}:${lastImport.port}`
+    if (current?.name === MANAGED_PROFILE_NAME) return 'Конфиг импортирован'
+    return 'Конфиг ещё не импортирован'
+  }, [current?.name, lastImport])
+
+  const handleImportFile = useLockFn(async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.conf')) {
+      showNotice.error('Выберите WireGuard .conf файл')
+      return
     }
+
+    try {
+      const fileData = await readFileAsText(file)
+      const result = await importWireguardConf(fileData, file.name)
+      setLastImport(result)
+      await mutateProfiles()
+      showNotice.success(
+        result.replacedExisting
+          ? 'WireGuard конфиг обновлён'
+          : 'WireGuard конфиг импортирован',
+      )
+    } catch (err) {
+      showNotice.error(err)
+    }
+  })
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) void handleImportFile(file)
+    event.target.value = ''
   }
 
-  const nonCriticalCards = useMemo(
-    () => [
-      renderCard(
-        'traffic',
-        <EnhancedCard
-          title={t('home.page.cards.trafficStats')}
-          icon={<SpeedOutlined />}
-          iconColor="secondary"
-        >
-          <EnhancedTrafficStats />
-        </EnhancedCard>,
-        12,
-      ),
-      renderCard(
-        'test',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyTestCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'ip',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyIpInfoCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'clashinfo',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyClashInfoCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'systeminfo',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazySystemInfoCard />
-        </Suspense>,
-      ),
-    ],
-    [t, renderCard],
-  )
-  const dialogKey = useMemo(
-    () => `${serializeCardFlags(effectiveHomeCards)}:${settingsOpen ? 1 : 0}`,
-    [effectiveHomeCards, settingsOpen],
-  )
+  const handleToggleVpn = useLockFn(async () => {
+    if (!hasManagedProfile) {
+      showNotice.error('Сначала импортируйте WireGuard .conf файл')
+      return
+    }
+
+    try {
+      const next = !tunEnabled
+
+      if (next) {
+        const [adminMode, serviceOk] = await Promise.all([
+          isAdmin(),
+          isServiceAvailable(),
+        ])
+
+        if (!adminMode && !serviceOk) {
+          showNotice.info('Для TUN нужно установить системный сервис')
+          await installServiceAndRestartCore()
+
+          const refreshed = await mutateSystemState()
+          const serviceInstalled =
+            refreshed.data?.isServiceOk || (await isServiceAvailable())
+          if (!serviceInstalled) {
+            showNotice.error(
+              'Сервис не установлен. Подключение VPN не включено.',
+            )
+            return
+          }
+        }
+      }
+
+      await setKaifVpnEnabled(next)
+      await patchVerge({ enable_system_proxy: false, enable_tun_mode: next })
+      showNotice.success(next ? 'VPN подключён' : 'VPN отключён')
+    } catch (err) {
+      showNotice.error(err)
+    }
+  })
+
+  const handleAutoLaunch = useLockFn(async (_: unknown, checked: boolean) => {
+    try {
+      await patchVerge({
+        enable_auto_launch: checked,
+        enable_silent_start: checked,
+      })
+      showNotice.success(checked ? 'Автозапуск включён' : 'Автозапуск выключен')
+    } catch (err) {
+      showNotice.error(err)
+    }
+  })
+
   return (
     <BasePage
-      title={t('home.page.title')}
-      contentStyle={{ padding: 2 }}
-      header={
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Tooltip title={t('home.page.tooltips.lightweightMode')} arrow>
-            <IconButton
-              onClick={async () => await entry_lightweight_mode()}
-              size="small"
-              color="inherit"
+      title="kaif vpnchik"
+      contentStyle={{
+        minHeight: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 560, borderRadius: 4 }}>
+        <CardContent>
+          <Stack spacing={3}>
+            <Box sx={{ textAlign: 'center' }}>
+              <RocketLaunchRounded color="primary" sx={{ fontSize: 54 }} />
+              <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+                kaif vpnchik
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Импортируйте WireGuard .conf, а приложение само подготовит
+                Clash/Mihomo профиль с DIRECT для российских доменов.
+              </Typography>
+            </Box>
+
+            <Box
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDragActive(true)
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(event) => {
+                event.preventDefault()
+                setDragActive(false)
+                const file = event.dataTransfer.files?.[0]
+                if (file) void handleImportFile(file)
+              }}
+              sx={{
+                border: '2px dashed',
+                borderColor: dragActive ? 'primary.main' : 'divider',
+                borderRadius: 3,
+                p: 3,
+                textAlign: 'center',
+                bgcolor: dragActive ? 'action.hover' : 'transparent',
+              }}
             >
-              <HistoryEduOutlined />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('home.page.tooltips.manual')} arrow>
-            <IconButton onClick={toGithubDoc} size="small" color="inherit">
-              <HelpOutlineRounded />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('home.page.tooltips.settings')} arrow>
-            <IconButton onClick={openSettings} size="small" color="inherit">
-              <SettingsOutlined />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      }
-    >
-      <Grid container spacing={1.5} columns={{ xs: 6, sm: 6, md: 12 }}>
-        {criticalCards}
+              <CloudUploadRounded color="primary" sx={{ fontSize: 42 }} />
+              <Typography sx={{ mt: 1, fontWeight: 600 }}>
+                Перетащите .conf файл сюда
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                или выберите WireGuard конфиг вручную
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={() => inputRef.current?.click()}
+              >
+                Выбрать .conf
+              </Button>
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".conf"
+                hidden
+                onChange={handleFileInput}
+              />
+            </Box>
 
-        {nonCriticalCards}
-      </Grid>
+            <Alert severity={hasManagedProfile ? 'success' : 'info'}>
+              {endpointLabel}
+            </Alert>
 
-      {/* 首页设置弹窗 */}
-      <HomeSettingsDialog
-        key={dialogKey}
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        homeCards={effectiveHomeCards}
-        onSave={handleSaveSettings}
-      />
+            {!isTunModeAvailable && (
+              <Alert severity="warning">
+                Для TUN режима нужны права администратора или системный сервис.
+                При подключении приложение предложит установить сервис.
+              </Alert>
+            )}
+
+            <Button
+              size="large"
+              variant="contained"
+              color={tunEnabled ? 'error' : 'primary'}
+              startIcon={<PowerSettingsNewRounded />}
+              disabled={!hasManagedProfile}
+              onClick={handleToggleVpn}
+              sx={{ py: 1.4, borderRadius: 3, fontWeight: 700 }}
+            >
+              {tunEnabled ? 'Отключить VPN' : 'Подключить VPN'}
+            </Button>
+
+            <FormControlLabel
+              control={
+                <MuiSwitch
+                  checked={autoLaunchEnabled}
+                  onChange={handleAutoLaunch}
+                />
+              }
+              label="Запускать при старте системы"
+            />
+
+            <Typography variant="caption" color="text.secondary">
+              Системный прокси не используется. При закрытии окна приложение
+              остаётся в трее, где VPN можно быстро включить или выключить.
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
     </BasePage>
-  )
-}
-
-// 增强版网络设置卡片组件
-const NetworkSettingsCard = () => {
-  const { t } = useTranslation()
-  return (
-    <EnhancedCard
-      title={t('home.page.cards.networkSettings')}
-      icon={<DnsOutlined />}
-      iconColor="primary"
-      action={null}
-    >
-      <ProxyTunCard />
-    </EnhancedCard>
-  )
-}
-
-// 增强版 Clash 模式卡片组件
-const ClashModeEnhancedCard = () => {
-  const { t } = useTranslation()
-  return (
-    <EnhancedCard
-      title={t('home.page.cards.proxyMode')}
-      icon={<RouterOutlined />}
-      iconColor="info"
-      action={null}
-    >
-      <ClashModeCard />
-    </EnhancedCard>
   )
 }
 

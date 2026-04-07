@@ -40,9 +40,6 @@ tray:
   globalMode: الوضع العام
   directMode: الوضع المباشر
   outboundModes: أوضاع الخروج
-  rule: قاعدة
-  direct: مباشر
-  global: عام
   profiles: الملفات التعريفية
   proxies: وكلاء
   systemProxy: وكيل النظام

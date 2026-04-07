@@ -40,9 +40,6 @@ tray:
   globalMode: グローバルモード
   directMode: ダイレクトモード
   outboundModes: アウトバウンドモード
-  rule: ルール
-  direct: ダイレクト
-  global: グローバル
   profiles: プロファイル
   proxies: プロキシ
   systemProxy: システムプロキシ

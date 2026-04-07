@@ -40,9 +40,6 @@ tray:
   globalMode: Mode Global
   directMode: Mode Langsung
   outboundModes: Mode Keluar
-  rule: Aturan
-  direct: Langsung
-  global: Global
   profiles: Profil
   proxies: Proksi
   systemProxy: Proksi Sistem

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="K">
+  <rect x="40" y="40" width="432" height="432" rx="120" fill="#111827"/>
+  <rect x="55" y="55" width="402" height="402" rx="110" fill="#1d4ed8"/>
+  <path d="M55 340h402v77c0 22-18 40-40 40H95c-22 0-40-18-40-40v-77z" fill="#06b6d4"/>
+  <text
+    x="256"
+    y="334"
+    text-anchor="middle"
+    font-family="Helvetica, Arial, sans-serif"
+    font-size="316"
+    font-weight="800"
+    fill="#ffffff"
+    stroke="#7dd3fc"
+    stroke-width="8"
+    paint-order="stroke fill"
+  >K</text>
+</svg>

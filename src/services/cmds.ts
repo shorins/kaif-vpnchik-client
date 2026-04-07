@@ -47,6 +47,17 @@ export async function importProfile(url: string, option?: IProfileOption) {
   })
 }
 
+export async function importWireguardConf(fileData: string, fileName?: string) {
+  return invoke<IWireGuardImportResult>('import_wireguard_conf', {
+    fileData,
+    fileName,
+  })
+}
+
+export async function setKaifVpnEnabled(enable: boolean) {
+  return invoke<boolean>('set_kaif_vpn_enabled', { enable })
+}
+
 export async function reorderProfile(activeId: string, overId: string) {
   return invoke<void>('reorder_profile', {
     activeId,

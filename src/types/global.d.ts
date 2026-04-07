@@ -301,6 +301,15 @@ interface IProfilesConfig {
   items?: IProfileItem[]
 }
 
+interface IWireGuardImportResult {
+  profileUid: string
+  profileName: string
+  server: string
+  port: number
+  replacedExisting: boolean
+  warnings: string[]
+}
+
 interface IVergeTestItem {
   uid: string
   name?: string

@@ -26,10 +26,11 @@ use tauri::{
     menu::{CheckMenuItem, IsMenuItem, MenuEvent, MenuItem, PredefinedMenuItem, Submenu},
 };
 mod menu_def;
-use menu_def::{MenuIds, MenuTexts};
+use menu_def::MenuIds;
 
 // TODO: 是否需要将可变菜单抽离存储起来，后续直接更新对应菜单实例，无需重新创建菜单(待考虑)
 
+#[allow(dead_code)]
 type ProxyMenuItem = (Option<Submenu<Wry>>, Vec<Box<dyn IsMenuItem<Wry>>>);
 
 const TRAY_CLICK_DEBOUNCE_MS: u64 = 300;
@@ -247,8 +248,7 @@ impl Tray {
 
         #[cfg(target_os = "macos")]
         {
-            let is_colorful = verge.tray_icon.as_deref().unwrap_or("monochrome") == "colorful";
-            logging_error!(Type::Tray, tray.set_icon_as_template(!is_colorful));
+            logging_error!(Type::Tray, tray.set_icon_as_template(false));
         }
 
         Ok(())
@@ -297,7 +297,7 @@ impl Tray {
         );
 
         let tooltip = format!(
-            "Clash Verge {}\n{}: {}\n{}: {}\n{}: {}",
+            "kaif vpnchik {}\n{}: {}\n{}: {}\n{}: {}",
             reassembled_version,
             sys_proxy_text,
             switch_str(system_proxy),
@@ -358,8 +358,7 @@ impl Tray {
         let mut builder = TrayIconBuilder::with_id("main").icon(icon).icon_as_template(false);
         #[cfg(target_os = "macos")]
         {
-            let is_monochrome = verge.tray_icon.as_ref().is_none_or(|v| v == "monochrome");
-            builder = builder.icon_as_template(is_monochrome);
+            builder = builder.icon_as_template(false);
         }
 
         #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -408,6 +407,7 @@ fn create_hotkeys(hotkeys: &Option<Vec<String>>) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
+#[allow(dead_code)]
 fn create_profile_menu_item(
     app_handle: &AppHandle,
     profiles_preview: Vec<IProfilePreview<'_>>,
@@ -428,6 +428,7 @@ fn create_profile_menu_item(
         .collect()
 }
 
+#[allow(dead_code)]
 fn create_subcreate_proxy_menu_item(
     app_handle: &AppHandle,
     proxy_mode: &str,
@@ -523,6 +524,7 @@ fn create_subcreate_proxy_menu_item(
     proxy_submenus
 }
 
+#[allow(dead_code)]
 fn create_proxy_menu_item(
     app_handle: &AppHandle,
     show_proxy_groups_inline: bool,
@@ -562,286 +564,52 @@ fn create_proxy_menu_item(
 
 async fn create_tray_menu(
     app_handle: &AppHandle,
-    mode: Option<&str>,
-    system_proxy_enabled: bool,
+    _mode: Option<&str>,
+    _system_proxy_enabled: bool,
     tun_mode_enabled: bool,
     tun_mode_available: bool,
-    profiles_preview: Vec<IProfilePreview<'_>>,
-    is_lightweight_mode: bool,
+    _profiles_preview: Vec<IProfilePreview<'_>>,
+    _is_lightweight_mode: bool,
 ) -> Result<tauri::menu::Menu<Wry>> {
-    let current_proxy_mode = mode.unwrap_or("");
-
-    // TODO: should update tray menu again when it was timeout error
-    let proxy_nodes_data = tokio::time::timeout(
-        Duration::from_millis(1000),
-        handle::Handle::mihomo().await.get_proxies(),
-    )
-    .await
-    .map_or(None, |res| res.ok());
-
-    let runtime_proxy_groups_order = cmd::get_runtime_config()
-        .await
-        .map_err(|e| {
-            logging!(
-                error,
-                Type::Cmd,
-                "Failed to fetch runtime proxy groups for tray menu: {e}"
-            );
-        })
-        .ok()
-        .flatten()
-        .map(|config| {
-            config
-                .get("proxy-groups")
-                .and_then(|groups| groups.as_sequence())
-                .map(|groups| {
-                    groups
-                        .iter()
-                        .filter_map(|group| group.get("name"))
-                        .filter_map(|name| name.as_str())
-                        .map(|name| name.into())
-                        .collect::<Vec<String>>()
-                })
-                .unwrap_or_default()
-        });
-
-    let proxy_group_order_map: Option<HashMap<smartstring::SmartString<smartstring::LazyCompact>, usize>> =
-        runtime_proxy_groups_order.as_ref().map(|group_names| {
-            group_names
-                .iter()
-                .enumerate()
-                .map(|(index, name)| (name.clone(), index))
-                .collect::<HashMap<String, usize>>()
-        });
-
     let verge_settings = Config::verge().await.latest_arc();
-    let tray_proxy_groups_display_mode = verge_settings
-        .tray_proxy_groups_display_mode
-        .as_deref()
-        .unwrap_or("default");
-    let show_outbound_modes_inline = verge_settings.tray_inline_outbound_modes.unwrap_or(false);
-
-    let version = env!("CARGO_PKG_VERSION");
-
     let hotkeys = create_hotkeys(&verge_settings.hotkeys);
-
-    let profile_menu_items: Vec<CheckMenuItem<Wry>> = create_profile_menu_item(app_handle, profiles_preview)?;
-
-    // Pre-fetch all localized strings
-    let texts = MenuTexts::new();
-    // Convert to references only when needed
-    let profile_menu_items_refs: Vec<&dyn IsMenuItem<Wry>> = profile_menu_items
-        .iter()
-        .map(|item| item as &dyn IsMenuItem<Wry>)
-        .collect();
-
+    let auto_launch_enabled = verge_settings.enable_auto_launch.unwrap_or(true);
     let open_window = &MenuItem::with_id(
         app_handle,
         MenuIds::DASHBOARD,
-        &texts.dashboard,
+        "Открыть kaif vpnchik",
         true,
         hotkeys.get("open_or_close_dashboard").map(|s| s.as_str()),
     )?;
-
-    let rule_mode = &CheckMenuItem::with_id(
-        app_handle,
-        MenuIds::RULE_MODE,
-        &texts.rule_mode,
-        true,
-        current_proxy_mode == "rule",
-        hotkeys.get("clash_mode_rule").map(|s| s.as_str()),
-    )?;
-
-    let global_mode = &CheckMenuItem::with_id(
-        app_handle,
-        MenuIds::GLOBAL_MODE,
-        &texts.global_mode,
-        true,
-        current_proxy_mode == "global",
-        hotkeys.get("clash_mode_global").map(|s| s.as_str()),
-    )?;
-
-    let direct_mode = &CheckMenuItem::with_id(
-        app_handle,
-        MenuIds::DIRECT_MODE,
-        &texts.direct_mode,
-        true,
-        current_proxy_mode == "direct",
-        hotkeys.get("clash_mode_direct").map(|s| s.as_str()),
-    )?;
-
-    let outbound_modes = if show_outbound_modes_inline {
-        None
-    } else {
-        let current_mode_text = match current_proxy_mode {
-            "global" => clash_verge_i18n::t!("tray.global"),
-            "direct" => clash_verge_i18n::t!("tray.direct"),
-            _ => clash_verge_i18n::t!("tray.rule"),
-        };
-        let outbound_modes_label = format!("{} ({})", texts.outbound_modes, current_mode_text);
-        Some(Submenu::with_id_and_items(
-            app_handle,
-            MenuIds::OUTBOUND_MODES,
-            outbound_modes_label.as_str(),
-            true,
-            &[
-                rule_mode as &dyn IsMenuItem<Wry>,
-                global_mode as &dyn IsMenuItem<Wry>,
-                direct_mode as &dyn IsMenuItem<Wry>,
-            ],
-        )?)
-    };
-
-    let profiles = &Submenu::with_id_and_items(
-        app_handle,
-        MenuIds::PROFILES,
-        &texts.profiles,
-        true,
-        &profile_menu_items_refs,
-    )?;
-
-    let proxy_sub_menus =
-        create_subcreate_proxy_menu_item(app_handle, current_proxy_mode, proxy_group_order_map, proxy_nodes_data);
-
-    let (proxies_menu, inline_proxy_items) = match tray_proxy_groups_display_mode {
-        "default" => create_proxy_menu_item(app_handle, false, proxy_sub_menus, &texts.proxies)?,
-        "inline" => create_proxy_menu_item(app_handle, true, proxy_sub_menus, &texts.proxies)?,
-        _ => (None, Vec::new()),
-    };
-
-    let system_proxy = &CheckMenuItem::with_id(
-        app_handle,
-        MenuIds::SYSTEM_PROXY,
-        &texts.system_proxy,
-        true,
-        system_proxy_enabled,
-        hotkeys.get("toggle_system_proxy").map(|s| s.as_str()),
-    )?;
-
     let tun_mode = &CheckMenuItem::with_id(
         app_handle,
         MenuIds::TUN_MODE,
-        &texts.tun_mode,
+        if tun_mode_enabled {
+            "Отключить VPN"
+        } else {
+            "Подключить VPN"
+        },
         tun_mode_available,
         tun_mode_enabled,
         hotkeys.get("toggle_tun_mode").map(|s| s.as_str()),
     )?;
-
-    let close_all_connections = &MenuItem::with_id(
+    let auto_launch = &CheckMenuItem::with_id(
         app_handle,
-        MenuIds::CLOSE_ALL_CONNECTIONS,
-        &texts.close_all_connections,
+        "tray_auto_launch",
+        "Запускать при старте системы",
         true,
+        auto_launch_enabled,
         None::<&str>,
     )?;
-
-    let lightweight_mode = &CheckMenuItem::with_id(
-        app_handle,
-        MenuIds::LIGHTWEIGHT_MODE,
-        &texts.lightweight_mode,
-        true,
-        is_lightweight_mode,
-        hotkeys.get("entry_lightweight_mode").map(|s| s.as_str()),
-    )?;
-
-    let copy_env = &MenuItem::with_id(app_handle, MenuIds::COPY_ENV, &texts.copy_env, true, None::<&str>)?;
-
-    let open_app_dir = &MenuItem::with_id(app_handle, MenuIds::CONF_DIR, &texts.conf_dir, true, None::<&str>)?;
-
-    let open_core_dir = &MenuItem::with_id(app_handle, MenuIds::CORE_DIR, &texts.core_dir, true, None::<&str>)?;
-
-    let open_logs_dir = &MenuItem::with_id(app_handle, MenuIds::LOGS_DIR, &texts.logs_dir, true, None::<&str>)?;
-
-    let open_app_log = &MenuItem::with_id(app_handle, MenuIds::APP_LOG, &texts.app_log, true, None::<&str>)?;
-
-    let open_core_log = &MenuItem::with_id(app_handle, MenuIds::CORE_LOG, &texts.core_log, true, None::<&str>)?;
-
-    let open_dir = &Submenu::with_id_and_items(
-        app_handle,
-        MenuIds::OPEN_DIR,
-        &texts.open_dir,
-        true,
-        &[open_app_dir, open_core_dir, open_logs_dir, open_app_log, open_core_log],
-    )?;
-
-    let restart_clash = &MenuItem::with_id(
-        app_handle,
-        MenuIds::RESTART_CLASH,
-        &texts.restart_clash,
-        true,
-        None::<&str>,
-    )?;
-
-    let restart_app = &MenuItem::with_id(app_handle, MenuIds::RESTART_APP, &texts.restart_app, true, None::<&str>)?;
-
-    let app_version = &MenuItem::with_id(
-        app_handle,
-        MenuIds::VERGE_VERSION,
-        format!("{} {version}", &texts.verge_version),
-        true,
-        None::<&str>,
-    )?;
-
-    let more = &Submenu::with_id_and_items(
-        app_handle,
-        MenuIds::MORE,
-        &texts.more,
-        true,
-        &[
-            copy_env as &dyn IsMenuItem<Wry>,
-            close_all_connections,
-            restart_clash,
-            restart_app,
-            app_version,
-        ],
-    )?;
-
     let quit_accelerator = hotkeys.get("quit").map(|s| s.as_str());
 
     #[cfg(target_os = "macos")]
     let quit_accelerator = quit_accelerator.or(Some("Cmd+Q"));
 
-    let quit = &MenuItem::with_id(app_handle, MenuIds::EXIT, &texts.exit, true, quit_accelerator)?;
+    let quit = &MenuItem::with_id(app_handle, MenuIds::EXIT, "Выход", true, quit_accelerator)?;
 
     let separator = &PredefinedMenuItem::separator(app_handle)?;
-
-    // 动态构建菜单项
-    let mut menu_items: Vec<&dyn IsMenuItem<Wry>> = vec![open_window, separator];
-
-    if show_outbound_modes_inline {
-        menu_items.extend_from_slice(&[
-            rule_mode as &dyn IsMenuItem<Wry>,
-            global_mode as &dyn IsMenuItem<Wry>,
-            direct_mode as &dyn IsMenuItem<Wry>,
-        ]);
-    } else if let Some(ref outbound_modes) = outbound_modes {
-        menu_items.push(outbound_modes);
-    }
-
-    menu_items.extend_from_slice(&[separator, profiles]);
-
-    // 如果有代理节点，添加代理节点菜单
-    match tray_proxy_groups_display_mode {
-        "default" => {
-            menu_items.extend(proxies_menu.iter().map(|item| item as &dyn IsMenuItem<_>));
-        }
-        "inline" if !inline_proxy_items.is_empty() => {
-            menu_items.extend(inline_proxy_items.iter().map(|item| item.as_ref()));
-        }
-        _ => {}
-    }
-
-    menu_items.extend_from_slice(&[
-        separator,
-        system_proxy as &dyn IsMenuItem<Wry>,
-        tun_mode as &dyn IsMenuItem<Wry>,
-        separator,
-        lightweight_mode as &dyn IsMenuItem<Wry>,
-        open_dir as &dyn IsMenuItem<Wry>,
-        more as &dyn IsMenuItem<Wry>,
-        separator,
-        quit as &dyn IsMenuItem<Wry>,
-    ]);
+    let menu_items: Vec<&dyn IsMenuItem<Wry>> = vec![open_window, tun_mode, separator, auto_launch, separator, quit];
 
     let menu = tauri::menu::MenuBuilder::new(app_handle).items(&menu_items).build()?;
     Ok(menu)
@@ -884,6 +652,7 @@ fn on_tray_icon_event(_tray_icon: &TrayIcon, tray_event: TrayIconEvent) {
                         WindowManager::show_main_window().await;
                     };
                 }
+                TrayAction::TrayMenu => {}
                 _ => {
                     logging!(warn, Type::Tray, "invalid tray event: {}", verge_tray_event);
                 }
@@ -920,7 +689,25 @@ fn on_menu_event(_: &AppHandle, event: MenuEvent) {
                 feat::toggle_system_proxy().await;
             }
             MenuIds::TUN_MODE => {
-                feat::toggle_tun_mode(None).await;
+                let current = Config::verge().await.latest_arc().enable_tun_mode.unwrap_or(false);
+                if let Err(err) = cmd::apply_kaif_vpn_enabled(!current).await {
+                    logging!(error, Type::Tray, "Failed to toggle kaif VPN from tray: {err}");
+                }
+            }
+            "tray_auto_launch" => {
+                let current = Config::verge().await.latest_arc().enable_auto_launch.unwrap_or(true);
+                if let Err(err) = feat::patch_verge(
+                    &IVerge {
+                        enable_auto_launch: Some(!current),
+                        enable_silent_start: Some(!current),
+                        ..IVerge::default()
+                    },
+                    false,
+                )
+                .await
+                {
+                    logging!(error, Type::Tray, "Failed to toggle auto launch from tray: {err}");
+                }
             }
             MenuIds::CLOSE_ALL_CONNECTIONS => {
                 if let Err(err) = handle::Handle::mihomo().await.close_all_connections().await {

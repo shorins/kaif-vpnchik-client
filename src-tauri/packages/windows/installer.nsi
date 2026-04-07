@@ -153,6 +153,8 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 
 ; Installer pages, must be ordered as they appear
 ; 1. Welcome Page
+!define MUI_WELCOMEPAGE_TITLE "Добро пожаловать в установщик kaif vpnchik"
+!define MUI_WELCOMEPAGE_TEXT "Этот мастер установит kaif vpnchik — минималистичный VPN-клиент с WireGuard и TUN-режимом.$\r$\n$\r$\nДля работы VPN может потребоваться установка системного сервиса с правами администратора."
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 !insertmacro MUI_PAGE_WELCOME
 
@@ -393,6 +395,8 @@ Var AppStartMenuFolder
 ; Don't auto jump to finish page after installation page,
 ; because the installation page has useful info that can be used debug any issues with the installer.
 !define MUI_FINISHPAGE_NOAUTOCLOSE
+!define MUI_FINISHPAGE_TITLE "kaif vpnchik установлен"
+!define MUI_FINISHPAGE_TEXT "Установка завершена. Запустите приложение, импортируйте WireGuard .conf и нажмите «Подключить VPN»."
 ; Use show readme button in the finish page as a button create a desktop shortcut
 !define MUI_FINISHPAGE_SHOWREADME
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "$(createDesktop)"

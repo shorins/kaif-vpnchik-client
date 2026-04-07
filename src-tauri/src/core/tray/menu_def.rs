@@ -4,12 +4,15 @@ use std::borrow::Cow;
 macro_rules! define_menu {
     ($($field:ident => $const_name:ident, $id:expr, $text:expr),+ $(,)?) => {
         #[derive(Debug)]
+        #[allow(dead_code)]
         pub struct MenuTexts {
             $(pub $field: Cow<'static, str>,)+
         }
 
+        #[allow(dead_code)]
         pub struct MenuIds;
 
+        #[allow(dead_code)]
         impl MenuTexts {
             pub fn new() -> Self {
                 Self {
@@ -18,6 +21,7 @@ macro_rules! define_menu {
             }
         }
 
+        #[allow(dead_code)]
         impl MenuIds {
             $(pub const $const_name: &'static str = $id;)+
         }

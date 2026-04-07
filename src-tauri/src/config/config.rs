@@ -3,7 +3,7 @@ use crate::{
     config::{PrfItem, profiles_append_item_safe, runtime::IRuntime},
     constants::{files, timing},
     core::{
-        CoreManager,
+        CoreManager, autostart,
         handle::{self, Handle},
         service, tray,
         validate::CoreConfigValidator,
@@ -67,6 +67,9 @@ impl Config {
 
         let verge = Self::verge().await.latest_arc();
         clash_verge_i18n::sync_locale(verge.language.as_deref());
+        if verge.enable_auto_launch.unwrap_or(false) {
+            logging_error!(Type::System, autostart::update_launch().await);
+        }
 
         // init Tun mode
         let handle = Handle::app_handle();

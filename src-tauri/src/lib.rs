@@ -187,6 +187,8 @@ mod app_init {
             cmd::exit_app,
             cmd::get_network_interfaces_info,
             cmd::get_profiles,
+            cmd::import_wireguard_conf,
+            cmd::set_kaif_vpn_enabled,
             cmd::enhance_profiles,
             cmd::patch_profiles_config,
             cmd::view_profile,
@@ -281,7 +283,7 @@ pub fn run() {
 
             #[cfg(target_os = "macos")]
             if let Some(window) = _app_handle.get_webview_window("main") {
-                let _ = window.set_title("Clash Verge");
+                let _ = window.set_title("kaif vpnchik");
             }
         }
 

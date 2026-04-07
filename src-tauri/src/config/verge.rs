@@ -386,6 +386,7 @@ impl IVerge {
             clash_core: Some("verge-mihomo".into()),
             language: Some(clash_verge_i18n::system_language().into()),
             theme_mode: Some("system".into()),
+            tray_event: Some("tray_menu".into()),
             #[cfg(not(target_os = "windows"))]
             env_type: Some("bash".into()),
             #[cfg(target_os = "windows")]
@@ -403,8 +404,8 @@ impl IVerge {
             common_tray_icon: Some(false),
             sysproxy_tray_icon: Some(false),
             tun_tray_icon: Some(false),
-            enable_auto_launch: Some(false),
-            enable_silent_start: Some(false),
+            enable_auto_launch: Some(true),
+            enable_silent_start: Some(true),
             enable_hover_jump_navigator: Some(true),
             hover_jump_navigator_delay: Some(280),
             enable_system_proxy: Some(false),
@@ -429,7 +430,7 @@ impl IVerge {
             use_default_bypass: Some(true),
             proxy_guard_duration: Some(30),
             auto_close_connection: Some(true),
-            auto_check_update: Some(true),
+            auto_check_update: Some(false),
             enable_builtin_enhanced: Some(true),
             auto_log_clean: Some(2), // 1: 1天, 2: 7天, 3: 30天, 4: 90天
             enable_auto_backup_schedule: Some(false),

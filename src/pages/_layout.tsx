@@ -320,11 +320,11 @@ const Layout = () => {
                 <SvgIcon
                   component={isDark ? iconDark : iconLight}
                   style={{
-                    height: '36px',
-                    width: '36px',
-                    marginTop: '-3px',
-                    marginRight: '5px',
-                    marginLeft: '-3px',
+                    height: '30px',
+                    width: '30px',
+                    marginTop: '-1px',
+                    marginRight: '4px',
+                    marginLeft: '-2px',
                   }}
                   inheritViewBox
                 />

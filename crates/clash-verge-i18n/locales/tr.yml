@@ -40,9 +40,6 @@ tray:
   globalMode: Küresel Mod
   directMode: Doğrudan Mod
   outboundModes: Giden Modlar
-  rule: Kural
-  direct: Doğrudan
-  global: Küresel
   profiles: Profiller
   proxies: Vekil'ler
   systemProxy: Sistem Vekil'i

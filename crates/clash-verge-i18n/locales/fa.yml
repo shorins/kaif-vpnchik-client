@@ -40,9 +40,6 @@ tray:
   globalMode: حالت سراسری
   directMode: حالت مستقیم
   outboundModes: حالت‌های خروجی
-  rule: قانون
-  direct: مستقیم
-  global: سراسری
   profiles: پروفایل‌ها
   proxies: پروکسی‌ها
   systemProxy: پروکسی سیستم

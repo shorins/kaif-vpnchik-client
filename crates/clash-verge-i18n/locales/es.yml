@@ -40,9 +40,6 @@ tray:
   globalMode: Modo global
   directMode: Modo directo
   outboundModes: Modos de salida
-  rule: Regla
-  direct: Directo
-  global: Global
   profiles: Perfiles
   proxies: Proxies
   systemProxy: Proxy del sistema
