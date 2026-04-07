@@ -98,6 +98,10 @@ jobs:
           tauriScript: pnpm
           args: --target ${{ matrix.target }} -b ${{ matrix.bundle }}
 
+      - name: Add macOS help.txt to DMG
+        if: github.event.inputs[matrix.enabled_input] == 'true' && matrix.os == 'macos-latest'
+        run: node scripts/rebuild-macos-dmg-with-help.mjs ${{ matrix.target }}
+
       - name: Upload installer
         if: github.event.inputs[matrix.enabled_input] == 'true'
         uses: actions/upload-artifact@v7

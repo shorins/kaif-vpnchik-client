@@ -1,0 +1,5 @@
+Если macOS пишет, что приложение повреждено, закройте kaif vpnchik и выполните в Terminal:
+
+sudo xattr -rd com.apple.quarantine /Applications/kaif\ vpnchik.app
+
+После этого запустите приложение снова из Applications.
